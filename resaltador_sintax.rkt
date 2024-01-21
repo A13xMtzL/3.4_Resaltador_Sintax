@@ -1,0 +1,221 @@
+;Codigo trabajado por: Monserrat Karime Moreno Casas- A01276775
+;                     Alejandro Martínez Luna A01276785
+#lang racket
+
+(require 2htdp/batch-io) ;Librería que nos ayuda a la lectura y escritura de archivos
+
+;;; Para ejecutar el Código es necesario poner la siguiente línea en la consola:
+;;; !! ----> (input lectura_archivo "C") <----
+
+
+;Direccion del archivo que recib el programa para poder realizar el resaltador
+;IMPORTANTE, cambiar la ruta para que el programa pueda ser ejecutado
+(define lectura_archivo
+    "C:\\Users\\27A13\\Downloads\\3.4_Resaltador_Sintax\\archivos_cpp\\input_ejemplo.txt"  )
+
+;Direccion del archivo para guardar el archivo html
+; salida_resaltador: -> string
+(define salida_resaltador
+    "C:\\Users\\27A13\\Downloads\\3.4_Resaltador_Sintax\\prueba.html" )
+
+
+;Funcion para recibir las rutas de los archivos
+(define input
+  (lambda (archivo tipo)  ;Recibe el archivo y el tipo de archivo 
+    (file_type archivo tipo)
+   )
+)
+
+;Funcion para leer el archivo caracter por caracter
+(define list
+   (lambda (archivo)
+      (read-1strings archivo)
+   )
+)
+
+;Funcion  de escritura en un archivo de texto
+(define escribe
+  (lambda (destino)
+    (lambda (txt)
+    (write-file destino (string-join (reverse txt) ""))
+  )
+ )  
+)
+
+;Función para identicar el lenguaje a analizar 
+(define file_type
+  (lambda (archivo tipo)
+  (cond
+    [(string-ci=? tipo "C") (leer_c (list archivo) txt)]
+    [else ((escribe salida_resaltador) (cons "\n"(cons "</html>" (cons "\n" (cons "</body>" (cons "\n"(cons "entrada no valida" txt) ))))))]
+  )
+ )   
+)
+;;; ------------------ Elementos sintacticos ------------------
+
+; libreria_cpp: -> lst (string)
+(define libreria_cpp
+  '("#include")
+)
+
+; elementos_lexicos: -> lst (string)
+(define elementos_lexicos
+  '("[" "]" "{" "}" "(" ")" ";" "," ":" "&" "|" "=" "<" ">" "%" "*" "/" "+" "-")
+)
+
+; lista_letras -> lst (string)
+(define lista_letras
+  '("a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z")
+)
+
+
+;numeros_archivo: -> lst (string)
+(define lista_numeros
+  '("1" "2" "3" "4" "5" "6" "7" "8" "9" "0")
+)
+
+
+;Lista de palabras reservadas
+; palabras_reservadas: -> lst (string)
+(define palabras_reservadas
+ '("using" "namespace" "while" "do" "for" "if" "else" "switch" "case" "cout" "cin" "return" "true" "false" "endl")
+)
+
+
+;Lista con tipos de datos
+; tipo_dato: -> lst (string)
+(define tipo_de_dato
+  '("int" "long" "float" "double" "bool" "char" "string" "void")
+)
+
+
+;Estructura inicial básica de html
+;Se definen los contenedores para información y para el código
+(define txt
+  '(
+
+"<div class = 'card-panel grey darken-2'>" ;Tarjeta para el código
+
+
+"<hr> <h3 style='color:white'> Salida de Código: </h3>"
+"<div class = 'container'>"
+
+"</div>"
+"</div>"
+"Monserrat Karime Moreno Casas - A01276775 <br>"
+"Alejandro Matínez Luna - A01276785 <br>"
+"</header>"
+"<H3> RESALTADOR DE SINTAXIS  <br>"
+"Implementación de métodos computacionales (Gpo 602) <br>"
+"</H3>"
+"<header>"
+"<div class = 'card-panel' style='color:black'>" ;Tarjeta para la información
+"<div class = 'container'>"
+
+"\n" "<body>" "\n"
+"</head>" "\n"
+"<title>RESALTADOR DE SINTAXIS</title>" "\n"
+"<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css'>"
+"<link rel='stylesheet' href='./css/styles.css'>" "\n"
+"<head>" "\n"
+"<html>" "\n"
+"<!DOCTYPE html>")
+)
+
+
+;Función para comparar caracteres de la lista con las listas creadas
+;Recibe una caracter y una lista 
+(define Buscar_Lista
+  (lambda (string list)
+    (cond
+     [(null? list) #f]
+     [(string-ci=? string (car list)) #t]
+     [else (Buscar_Lista string (cdr list))]
+    )
+  )
+)
+
+;Funcion post para generar formato de impresion a los caracteres con el html 
+(define post_libreria
+  (lambda (list txt)
+    (cond
+      [(null? list) ((escribe salida_resaltador) txt)]
+      [(string-ci=? (car list) "\n") (leer_c list (cons "</span>" txt))]
+      [(string-ci=? (car list) "<") (post_libreria (cdr list) (cons "&lt" txt))]
+      [(string-ci=? (car list) ">") (post_libreria (cdr list) (cons "&gt" txt))]
+      [else (post_libreria (cdr list) (cons (car list) txt))]
+     )
+  )
+)
+
+;Función que busca palabras reservadas o tipos de datos
+(define palabra_C
+  (lambda (list txt palabra)
+    (cond
+      [(null? list) ((escribe salida_resaltador) (cons palabra txt))]
+      [(and (not (Buscar_Lista (car list) lista_letras))(Buscar_Lista palabra palabras_reservadas)) (leer_c list (cons "</span>" (cons palabra (cons "<span class='reserved'>" txt))))]
+      [(and (not (Buscar_Lista (car list) lista_letras))(Buscar_Lista palabra tipo_de_dato)) (leer_c list (cons "</span>" (cons palabra (cons "<span class='data_type'>" txt))))]
+      [(and (not (Buscar_Lista (car list) lista_letras))(Buscar_Lista palabra libreria_cpp)) (post_libreria list (cons palabra (cons "<span class='pragma'>" txt)))]
+      [(string-ci=? (car list) " ") (leer_c list (cons palabra txt))]
+      [(string-ci=? (car list) "\n") (leer_c list (cons palabra txt))]
+      [(Buscar_Lista (car list) lista_numeros) (leer_c list (cons palabra txt))]
+      [(Buscar_Lista (car list) elementos_lexicos) (leer_c list (cons palabra txt))]
+      [else (palabra_C (cdr list) txt (~a palabra (car list)))]
+   )
+ )
+)
+
+
+
+;Función para agragar lista de los caracteres
+(define comentario_C
+  (lambda (list txt)
+    (cond
+      [(null? list) ((escribe salida_resaltador) txt)]
+      [(string-ci=? (car list) "\"") (leer_c (cdr list) (cons "</span>"(cons (car list) txt)))]
+      [else (comentario_C (cdr list) (cons (car list) txt))]
+     )
+  )
+)
+
+
+;Función para enlistar los caracteres encontrados en un comentario 
+;Identifica los saltos de linea 
+(define comentario_slash
+  (lambda (list txt)
+    (cond
+      [(null? list) ((escribe salida_resaltador) txt)]
+      [(string-ci=? (car list) "\n") (leer_c (cdr list) (cons "</span>" (cons "<p>" (cons "\n" (cons "</p>" (cons (car list) txt))))))]
+      [else (comentario_slash (cdr list) (cons (car list) txt))]
+     )
+  )
+)
+
+;Función que enlista los caracteres encontrados en un comentario multilínea 
+(define comentario_multiple
+  (lambda (list txt)
+    (cond
+      [(null? list) ((escribe salida_resaltador) txt)]
+      [(string-ci=? (car list) "\n") (comentario_multiple (cdr list) (cons "<span class='comment'>"(cons "</span>" (cons "<p>" (cons "\n" (cons "</p>" txt))))))]
+      [(and (string-ci=? (car list) "*") (string-ci=? (cadr list) "/") (leer_c (cddr list) (cons "</span>"(cons "*/" txt))))]
+      [else (comentario_multiple (cdr list) (cons (car list) txt))]
+     )
+  )
+)
+
+;Función para identificar el token y ordenarlo en el html
+(define leer_c
+  (lambda (list txt)
+    (cond
+      [(null? list) ((escribe salida_resaltador) (cons "\n"(cons "</html>" (cons "\n" (cons "</body>" (cons "\n" txt))))))]
+      [(string-ci=? (car list) " ") (leer_c (cdr list) (cons "&nbsp;" txt))]
+      [(string-ci=? (car list) "\n") (leer_c (cdr list) (cons "<p>" (cons "\n" (cons "</p>" txt))))]
+      [(and (string-ci=? (car list) "/") (string-ci=? (cadr list) "/") (comentario_slash (cddr list) (cons "//" (cons "<span class='comment'>" txt))))]
+      [(and (string-ci=? (car list) "/") (string-ci=? (cadr list) "*") (comentario_multiple (cddr list) (cons "/*" (cons "<span class='comment'>" txt))))]
+      [(string-ci=? (car list) "\"") (comentario_C (cdr list) (cons (car list) (cons "<span class='text'>" txt)))]
+      [(Buscar_Lista (car list) lista_numeros) (leer_c (cdr list) (cons "</span>" (cons (car list) (cons "<span class='number'>" txt))))]
+      [(Buscar_Lista (car list) elementos_lexicos) (leer_c (cdr list) (cons "</span>" (cons (car list) (cons "<span class='reserved'>" txt))))]
+      [else (palabra_C (cdr list) txt (~a "" (car list)))]
+     )
+   )
+)
